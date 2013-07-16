@@ -13,6 +13,15 @@ prox.config = {}
 
 -- Functions
 
+function prox.getDetails(k)
+  local pcS, pcD = pcall(function() prox.sensor.getTargetDetails(k) end)
+  if (not pcS) then
+    return nil
+  else
+    return pcD
+  end
+end
+
 function prox.getSensor()
   local d = {"left", "right", "top", "bottom", "back", "front"}
   for i=1,6 do
@@ -86,8 +95,8 @@ end
 
 function prox.doEnter(NewEntity)
   print("+ " .. NewEntity)
-  local targetInfo = prox.sensor.getTargetDetails(NewEntity)
-  prox.tracking[NewEntity] = targetInfo.Inventory
+  local targetInfo = prox.getDetails(NewEntity)
+  prox.tracking[NewEntity] = targetInfo
 end
 
 function prox.doLeave(OldEntity)
@@ -105,21 +114,23 @@ end
 function prox.getEntered(nextMap)
   for k,v in pairs(prox.lastMap) do
     nextMap[k] = v
-    local kPos = prox.sensor.getTargetDetails(k).Position
+    local kPos = prox.tracking[k].Position
     if (prox.checkName(k) and prox.checkCoords(kPos.X, kPos.Y, kPos.Z)) then
       if prox.hasKey(prox.stateMap, k) then
         -- Entity has been seen already
         -- Check Inventory
-        local targetInfo = prox.sensor.getTargetDetails(k)
-        for i=1,42 do
-          if (targetInfo.Inventory[i].Name == prox.tracking[k][i].Name) then
-            if (targetInfo.Inventory[i].Size == prox.tracking[k][i].Size) then
-              --- Nothing yet
+        local targetInfo = prox.getDetails(k)
+        if (targetInfo) then -- Make sure it hasn't vanished!
+          for i=1,42 do
+            if (targetInfo.Inventory[i].Name == prox.tracking[k][i].Name) then
+              if (targetInfo.Inventory[i].Size == prox.tracking[k][i].Size) then
+                --- Nothing yet
+              else
+                prox.doInventory(k, i, targetInfo.Inventory[i])
+              end
             else
               prox.doInventory(k, i, targetInfo.Inventory[i])
             end
-          else
-            prox.doInventory(k, i, targetInfo.Inventory[i])
           end
         end
       else
@@ -133,7 +144,7 @@ end
 
 function prox.getLeft(nextMap)
   for k,v in pairs(prox.stateMap) do
-    local kPos = prox.sensor.getTargetDetails(k).Position
+    local kPos = prox.getDetails(k).Position
     if (prox.checkName(k) and prox.checkCoords(kPos.X, kPos.Y, kPos.Z)) then
       if prox.hasKey(prox.lastMap, k) then
         -- Still present
@@ -188,7 +199,7 @@ prox.stateMap = prox.getPlayers(prox.sensor.getTargets())
 for k,v in pairs(prox.stateMap) do
   prox.tracking[k] = prox.sensor.getTargetDetails(k).Inventory
 end
-term.setCursorPos(1,3)
+term.setCursorPos(1,4)
 while true do  
   prox.showGUI()
   prox.lastMap = prox.getPlayers(prox.sensor.getTargets())
