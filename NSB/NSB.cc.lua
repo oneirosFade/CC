@@ -26,7 +26,7 @@ end
 
 -- Retrieve Tab Completion
 print("Cloning ReadOverride for Tab Completion...")
-local nsb.fileRaw = nsb.gitGet ("oneirosFade", "CC", "External/ReadOverride.cc.lua")
+local nsb.fileRaw = nsb.gitGet ("oneirosFade", "CC", "master/External/ReadOverride.cc.lua")
 print("Installing ReadOverride...")
 fs.makeDir("/sys")
 local nsb.file = fs.open("/sys/ReadOverride.cc.lua", "w")
