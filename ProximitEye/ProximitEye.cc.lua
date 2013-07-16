@@ -5,7 +5,7 @@
 -- APIs
 
 os.loadAPI("/ocs/apis/sensor")
-os.loadAPI(shell.resolve("./SafeSense"))
+os.loadAPI(shell.resolve("../APIs/SensorX"))
 os.loadAPI(shell.resolve("../APIs/Conf"))
 os.loadAPI(shell.resolve("../APIs/Map"))
 
