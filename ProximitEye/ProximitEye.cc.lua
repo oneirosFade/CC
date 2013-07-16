@@ -121,7 +121,7 @@ function prox.getEntered(nextMap)
         -- Entity has been seen already
         -- Check Inventory
         local targetInfo = prox.getDetails(eKey)
-        if (targetInfo) then -- Make sure it hasn't vanished!
+        --if (targetInfo) then -- Make sure it hasn't vanished!
           for i=1,42 do
             if (targetInfo.Inventory[i].Name == prox.tracking[eData.Name][i].Name) then
               if (targetInfo.Inventory[i].Size == prox.tracking[eData.Name][i].Size) then
@@ -133,7 +133,7 @@ function prox.getEntered(nextMap)
               prox.doInventory(eKey, i, targetInfo.Inventory[i])
             end
           end
-        end
+        --end
       else
         -- New entity detected
         prox.doEnter(eKey)
