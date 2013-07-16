@@ -1,15 +1,17 @@
--- --------------------------------------------- --
--- ProximitEye v1.00                             --
--- --------------------------------------------- --
+-- ProximitEye v1.01
+-- oneirosFade 2013
+-- GPLv3 Licensed
 
--- GLOBAL SPACE --
+-- Namespace
 
 local prox = {}
 prox.stateMap = {}
 prox.lastMap = {}
 prox.tracking = {}
 
--- FUNCTIONS --
+prox.config = {}
+
+-- Functions
 
 function prox.getSensor()
   local d = {"left", "right", "top", "bottom", "back", "front"}
@@ -21,8 +23,38 @@ function prox.getSensor()
     end
   end
 
-  print("No sensor found. Exiting program.")
-  exit(1)
+  return nil
+end
+
+function prox.getConfig()
+  local fAbsPath = shell.resolve("./Prox.conf")
+  if (not fs.exists(fAbsPath)) then
+    return false
+  end
+  local fHandle = fs.open(fAbsPath, "r")
+  local fData = fHandle.readAll()
+  fHandle.close()
+  prox.config = textutils.unserialize(fData)
+end
+
+function prox.checkCoords(pX, pY, pZ)
+  if (((pX >= prox.config.v1x) and (pX <= prox.config.v2x)) or ((pX <= prox.config.v1x) and (pX >= prox.config.v2x))) then
+    if (((pY >= prox.config.v1y) and (pY <= prox.config.v2y)) or ((pY <= prox.config.v1y) and (pY >= prox.config.v2y))) then
+      if (((pZ >= prox.config.v1z) and (pZ <= prox.config.v2z)) or ((pZ <= prox.config.v1z) and (pZ >= prox.config.v2z))) then
+        return true
+      end
+    end
+  end
+  return false
+end
+
+function prox.checkName(pName)
+  for pNum,pAuth in pairs(prox.config.authorized) do
+    if (pName == pAuth) then
+      return false -- False for authorized, do not track
+    end
+  end
+  return true -- True for unauthorized, track this
 end
 
 function prox.getPlayers(EntityMap)
@@ -73,26 +105,27 @@ end
 function prox.getEntered(nextMap)
   for k,v in pairs(prox.lastMap) do
     nextMap[k] = v
-    if k ~= "oneirosFade" then
-    if prox.hasKey(prox.stateMap, k) then
-      -- Entity has been seen already
-      -- Check Inventory
-      local targetInfo = prox.sensor.getTargetDetails(k)
-      for i=1,42 do
-        if (targetInfo.Inventory[i].Name == prox.tracking[k][i].Name) then
-          if (targetInfo.Inventory[i].Size == prox.tracking[k][i].Size) then
-            --- Nothing yet
+    local kPos = prox.sensor.getTargetDetails(k).Position
+    if (prox.checkName(k) and prox.checkCoords(kPos.X, kPos.Y, kPos.Z)) then
+      if prox.hasKey(prox.stateMap, k) then
+        -- Entity has been seen already
+        -- Check Inventory
+        local targetInfo = prox.sensor.getTargetDetails(k)
+        for i=1,42 do
+          if (targetInfo.Inventory[i].Name == prox.tracking[k][i].Name) then
+            if (targetInfo.Inventory[i].Size == prox.tracking[k][i].Size) then
+              --- Nothing yet
+            else
+              prox.doInventory(k, i, targetInfo.Inventory[i])
+            end
           else
             prox.doInventory(k, i, targetInfo.Inventory[i])
           end
-        else
-          prox.doInventory(k, i, targetInfo.Inventory[i])
         end
+      else
+        -- New entity detected
+        prox.doEnter(k)
       end
-    else
-      -- New entity detected
-      prox.doEnter(k)
-    end
     end
   end
   return nextMap
@@ -100,22 +133,42 @@ end
 
 function prox.getLeft(nextMap)
   for k,v in pairs(prox.stateMap) do
-    if k ~= "oneirosFade" then
-    if prox.hasKey(prox.lastMap, k) then
-      -- Still present
-    else
-      -- Entity left
-      prox.doLeave(k)
-    end
+    local kPos = prox.sensor.getTargetDetails(k).Position
+    if (prox.checkName(k) and prox.checkCoords(kPos.X, kPos.Y, kPos.Z)) then
+      if prox.hasKey(prox.lastMap, k) then
+        -- Still present
+      else
+        -- Entity left
+        prox.doLeave(k)
+      end
     end
   end
   return nextMap
 end
 
--- MAIN
+function prox.showGUI()
+  local tX, tY = term.getCursorPos()
+  term.setCursorPos(39, 1)
+  print("| ProximitEye")
+  term.setCursorPos(39, 2)
+  print("+------------")
+  term.setCursorPos(tX, tY)
+end
+
+-- Main
 
 os.loadAPI("ocs/apis/sensor")
+
 prox.sensor = prox.getSensor()
+if (not prox.sensor) then
+  print ("!! This utility requires a sensor with the Entity card.")
+  return false
+end
+
+if (not prox.getConfig()) then
+  prox.config = {v1x = -9999, v1y = 1, v1z = -9999, v2x = 9999, v2y = 255, v2z = 9999,
+    authorized = {}}
+end
 
 term.clear()
 
@@ -125,13 +178,8 @@ for k,v in pairs(prox.stateMap) do
 end
 term.setCursorPos(1,3)
 while true do  
-  local tx,ty = term.getCursorPos()
-  term.setCursorPos(39,1)
-  print("| ProximitEye")
-  term.setCursorPos(39,2)
-  print("+------------")
-  term.setCursorPos(tx,ty)
-    prox.lastMap = prox.getPlayers(prox.sensor.getTargets())
+  prox.showGUI()
+  prox.lastMap = prox.getPlayers(prox.sensor.getTargets())
   local nextMap = {}
 
   -- Check for new entities
@@ -141,5 +189,4 @@ while true do
   prox.stateMap = nextMap
       
   os.sleep(1)
-
 end
