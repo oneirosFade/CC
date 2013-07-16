@@ -2,50 +2,23 @@
 -- oneirosFade 2013
 -- GPLv3 Licensed
 
+-- APIs
+
+os.loadAPI("/ocs/apis/sensor")
+os.loadAPI(shell.resolve("./SafeSense"))
+os.loadAPI(shell.resolve("../APIs/Conf"))
+os.loadAPI(shell.resolve("../APIs/Map"))
+
 -- Namespace
 
 local prox = {}
 prox.stateMap = {}
 prox.lastMap = {}
-prox.tracking = {}
+prox.invTracker = {}
 
 prox.config = {}
 
 -- Functions
-
-function prox.getDetails(eKey)
-  local pcS, pcD = pcall(function() prox.sensor.getTargetDetails(eKey) end)
-  if (not pcS) then
-    print(pcD)
-    return nil
-  else
-    return pcD
-  end
-end
-
-function prox.getSensor()
-  local compFace = {"left", "right", "top", "bottom", "back", "front"}
-  for i=1,6 do
-    if peripheral.isPresent(compFace[i]) then
-      if peripheral.getType(compFace[i]) == "sensor" then
-        return sensor.wrap(compFace[i])
-      end
-    end
-  end
-
-  return nil
-end
-
-function prox.getConfig()
-  local fAbsPath = shell.resolve("./Prox.conf")
-  if (not fs.exists(fAbsPath)) then
-    return false
-  end
-  local fHandle = fs.open(fAbsPath, "r")
-  local fData = fHandle.readAll()
-  fHandle.close()
-  prox.config = textutils.unserialize(fData)
-end
 
 function prox.checkCoords(pX, pY, pZ)
   if (((pX >= prox.config.v1x) and (pX <= prox.config.v2x)) or ((pX <= prox.config.v1x) and (pX >= prox.config.v2x))) then
@@ -67,37 +40,9 @@ function prox.checkName(pName)
   return true -- True for unauthorized, track this
 end
 
-function prox.getPlayers(EntityMap)
-  local PlayerMap = {}
-  for eKey,eData in pairs(EntityMap) do
-    if eData.Name == "Player" then
-      PlayerMap[eKey] = eData
-    end
-  end
-  return PlayerMap
-end
-
-function prox.hasKey(Map, Key)
-  for key, val in pairs(Map) do
-    if key == Key then
-      return true
-    end
-  end
-  return false
-end
-
-function prox.getInventory(PlayerData)
-  local PlayerInventory = {}
-  for invSlot, invData in pairs(PlayerData.Inventory) do
-    PlayerInventory[invSlot] = invData
-  end
-  return PlayerInventory
-end
-
-function prox.doEnter(NewEntity)
-  print("+ " .. NewEntity)
-  local targetInfo = prox.getDetails(NewEntity)
-  prox.tracking[NewEntity] = targetInfo
+function prox.doEnter(entityKey)
+  print("+ " .. entityKey) -- Should always be username
+  prox.invTracker[entityKey] = prox.nextMap[entityKey].detail.Inventory
 end
 
 function prox.doLeave(OldEntity)
@@ -106,10 +51,10 @@ end
 
 function prox.doInventory(eName, invSlot, NewData)
   print(eName .. "/" .. invSlot .. " " ..
-    prox.tracking[eName][invSlot].Size .. "x" ..
-    prox.tracking[eName][invSlot].Name .. " -> " ..
+    prox.invTracker[eName][invSlot].Size .. "x" ..
+    prox.invTracker[eName][invSlot].Name .. " -> " ..
     NewData.Size .. "x" .. NewData.Name)
-  prox.tracking[eName][invSlot] = NewData
+  prox.invTracker[eName][invSlot] = NewData
 end
 
 function prox.getEntered(nextMap)
@@ -117,14 +62,14 @@ function prox.getEntered(nextMap)
     nextMap[eKey] = eData
     local kPos = eData.Position
     if (prox.checkName(eData.Name) and prox.checkCoords(kPos.X, kPos.Y, kPos.Z)) then
-      if prox.hasKey(prox.stateMap, eKey) then
+      if Map.hasKey(prox.stateMap, eKey) then
         -- Entity has been seen already
         -- Check Inventory
-        local targetInfo = prox.getDetails(eKey)
+        local targetInfo = SafeSense.getDetails(prox.sensor, eKey)
         --if (targetInfo) then -- Make sure it hasn't vanished!
           for i=1,42 do
-            if (targetInfo.Inventory[i].Name == prox.tracking[eData.Name][i].Name) then
-              if (targetInfo.Inventory[i].Size == prox.tracking[eData.Name][i].Size) then
+            if (targetInfo.Inventory[i].Name == prox.invTracker[eData.Name][i].Name) then
+              if (targetInfo.Inventory[i].Size == prox.invTracker[eData.Name][i].Size) then
                 --- Nothing yet
               else
                 prox.doInventory(eKey, i, targetInfo.Inventory[i])
@@ -147,7 +92,7 @@ function prox.getLeft(nextMap)
   for eKey, eData in pairs(prox.stateMap) do
     local kPos = eData.Position
     if (prox.checkName(eData.Name) and prox.checkCoords(kPos.X, kPos.Y, kPos.Z)) then
-      if prox.hasKey(prox.lastMap, eKey) then
+      if Map.hasKey(prox.lastMap, eKey) then
         -- Still present
       else
         -- Entity left
@@ -180,32 +125,33 @@ end
 
 -- Main
 
-os.loadAPI("ocs/apis/sensor")
-
-prox.sensor = prox.getSensor()
+-- Get a handle to the sensor
+prox.sensor = SafeSense.wrapSensor()
 if (not prox.sensor) then
   print ("!! This utility requires a sensor with the Entity card.")
   return false
 end
 
-prox.getConfig()
-if (not prox.config.v1x) then
+-- Load the config, handle missing configs
+prox.config = Conf.loadConfig("Prox.conf")
+if (not prox.config) then
   prox.config = {v1x = -9999, v1y = 1, v1z = -9999, v2x = 9999, v2y = 255, v2z = 9999,
     authorized = {}}
 end
 
+-- Clear screen
 term.clear()
 
 -- Fill initial statemap
-prox.stateMap = prox.getPlayers(prox.sensor.getTargets())
+prox.stateMap = SafeSense.getPlayers(prox.sensor)
 for eKey, eData in pairs(prox.stateMap) do
-  prox.tracking[eKey] = prox.sensor.getTargetDetails(eKey)
+  prox.invTracker[eKey] = eData.detail.Inventory
 end
 
 term.setCursorPos(1,4)
 while true do  
   prox.showGUI()
-  prox.lastMap = prox.getPlayers(prox.sensor.getTargets())
+  prox.lastMap = SafeSense.getPlayers(prox.sensor)
   local nextMap = {}
 
   -- Check for new entities
