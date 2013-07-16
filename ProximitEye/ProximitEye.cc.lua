@@ -148,10 +148,18 @@ end
 
 function prox.showGUI()
   local tX, tY = term.getCursorPos()
-  term.setCursorPos(39, 1)
-  print("| ProximitEye")
-  term.setCursorPos(39, 2)
-  print("+------------")
+  term.setCursorPos(1, 1)
+  term.clearLine()
+  print("ProximitEye [Checking (" ..
+        prox.config.v1x .. ", " ..
+        prox.config.v1y .. ", " ..
+        prox.config.v1z .. ")-(" ..
+        prix.config.v2x .. ", " ..
+        prox.config.v2y .. ", " ..
+        prox.config.v2z .. ")")
+  term.setCursorPos(1, 2)
+  term.clearLine()
+  print("--------------------------------------------------")
   term.setCursorPos(tX, tY)
 end
 
