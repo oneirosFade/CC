@@ -115,8 +115,6 @@ end
 function prox.getEntered(nextMap)
   for k,v in pairs(prox.lastMap) do
     nextMap[k] = v
-    --local kDet = prox.getDetails(k)
-    --local kPos = kDet.Position
     local kPos = k.Position
     if (prox.checkName(k) and prox.checkCoords(kPos.X, kPos.Y, kPos.Z)) then
       if prox.hasKey(prox.stateMap, k) then
@@ -200,7 +198,7 @@ term.clear()
 
 prox.stateMap = prox.getPlayers(prox.sensor.getTargets())
 for k,v in pairs(prox.stateMap) do
-  prox.tracking[k] = prox.sensor.getTargetDetails(k).Inventory
+  prox.tracking[k] = prox.sensor.getTargetDetails(k)
 end
 term.setCursorPos(1,4)
 while true do  
