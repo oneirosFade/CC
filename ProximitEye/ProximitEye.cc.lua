@@ -150,16 +150,19 @@ function prox.showGUI()
   local tX, tY = term.getCursorPos()
   term.setCursorPos(1, 1)
   term.clearLine()
-  print("ProximitEye [Checking (" ..
+  print("ProximitEye")
+  term.setCursorPos(1, 2)
+  term.clearLine()
+  print("Checking (" ..
         prox.config.v1x .. ", " ..
         prox.config.v1y .. ", " ..
         prox.config.v1z .. ")-(" ..
         prox.config.v2x .. ", " ..
         prox.config.v2y .. ", " ..
         prox.config.v2z .. ")")
-  term.setCursorPos(1, 2)
+  term.setCursorPos(1, 3)
   term.clearLine()
-  print("--------------------------------------------------")
+  print("---------------------------------------------------")
   term.setCursorPos(tX, tY)
 end
 
@@ -173,7 +176,8 @@ if (not prox.sensor) then
   return false
 end
 
-if (not prox.getConfig()) then
+prox.getConfig()
+if (not prox.config.v1x) then
   prox.config = {v1x = -9999, v1y = 1, v1z = -9999, v2x = 9999, v2y = 255, v2z = 9999,
     authorized = {}}
 end
