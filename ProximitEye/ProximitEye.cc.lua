@@ -13,8 +13,8 @@ prox.config = {}
 
 -- Functions
 
-function prox.getDetails(k)
-  local pcS, pcD = pcall(function() prox.sensor.getTargetDetails(k) end)
+function prox.getDetails(eKey)
+  local pcS, pcD = pcall(function() prox.sensor.getTargetDetails(eKey) end)
   if (not pcS) then
     print(pcD)
     return nil
@@ -24,11 +24,11 @@ function prox.getDetails(k)
 end
 
 function prox.getSensor()
-  local d = {"left", "right", "top", "bottom", "back", "front"}
+  local compFace = {"left", "right", "top", "bottom", "back", "front"}
   for i=1,6 do
-    if peripheral.isPresent(d[i]) then
-      if peripheral.getType(d[i]) == "sensor" then
-        return sensor.wrap(d[i])
+    if peripheral.isPresent(compFace[i]) then
+      if peripheral.getType(compFace[i]) == "sensor" then
+        return sensor.wrap(compFace[i])
       end
     end
   end
@@ -59,7 +59,7 @@ function prox.checkCoords(pX, pY, pZ)
 end
 
 function prox.checkName(pName)
-  for pNum,pAuth in pairs(prox.config.authorized) do
+  for pIndex, pAuth in pairs(prox.config.authorized) do
     if (pName == pAuth) then
       return false -- False for authorized, do not track
     end
@@ -69,17 +69,17 @@ end
 
 function prox.getPlayers(EntityMap)
   local PlayerMap = {}
-  for k,v in pairs(EntityMap) do
-    if v.Name == "Player" then
-      PlayerMap[k] = v
+  for eKey,eData in pairs(EntityMap) do
+    if eData.Name == "Player" then
+      PlayerMap[eKey] = eData
     end
   end
   return PlayerMap
 end
 
 function prox.hasKey(Map, Key)
-  for k,v in pairs(Map) do
-    if k == Key then
+  for key, val in pairs(Map) do
+    if key == Key then
       return true
     end
   end
@@ -88,8 +88,8 @@ end
 
 function prox.getInventory(PlayerData)
   local PlayerInventory = {}
-  for k,v in pairs(PlayerData.Inventory) do
-    PlayerInventory[k] = v
+  for invSlot, invData in pairs(PlayerData.Inventory) do
+    PlayerInventory[invSlot] = invData
   end
   return PlayerInventory
 end
@@ -104,39 +104,39 @@ function prox.doLeave(OldEntity)
   print("- " .. OldEntity)
 end
 
-function prox.doInventory(Entity, Slot, New)
-  print(Entity .. "/" .. Slot .. " " ..
-    prox.tracking[Entity][Slot].Size .. "x" ..
-    prox.tracking[Entity][Slot].Name .. " -> " ..
-    New.Size .. "x" .. New.Name)
-  prox.tracking[Entity][Slot] = New 
+function prox.doInventory(eName, invSlot, NewData)
+  print(eName .. "/" .. invSlot .. " " ..
+    prox.tracking[eName][invSlot].Size .. "x" ..
+    prox.tracking[eName][invSlot].Name .. " -> " ..
+    NewData.Size .. "x" .. NewData.Name)
+  prox.tracking[eName][invSlot] = NewData
 end
 
 function prox.getEntered(nextMap)
-  for k,v in pairs(prox.lastMap) do
-    nextMap[k] = v
-    local kPos = v.Position
-    if (prox.checkName(k) and prox.checkCoords(kPos.X, kPos.Y, kPos.Z)) then
-      if prox.hasKey(prox.stateMap, k) then
+  for eKey, eData in pairs(prox.lastMap) do
+    nextMap[eKey] = eData
+    local kPos = eData.Position
+    if (prox.checkName(eData.Name) and prox.checkCoords(kPos.X, kPos.Y, kPos.Z)) then
+      if prox.hasKey(prox.stateMap, eKey) then
         -- Entity has been seen already
         -- Check Inventory
-        local targetInfo = prox.getDetails(k)
+        local targetInfo = prox.getDetails(eKey)
         if (targetInfo) then -- Make sure it hasn't vanished!
           for i=1,42 do
-            if (targetInfo.Inventory[i].Name == prox.tracking[k][i].Name) then
-              if (targetInfo.Inventory[i].Size == prox.tracking[k][i].Size) then
+            if (targetInfo.Inventory[i].Name == prox.tracking[eData.Name][i].Name) then
+              if (targetInfo.Inventory[i].Size == prox.tracking[eData.Name][i].Size) then
                 --- Nothing yet
               else
-                prox.doInventory(k, i, targetInfo.Inventory[i])
+                prox.doInventory(eKey, i, targetInfo.Inventory[i])
               end
             else
-              prox.doInventory(k, i, targetInfo.Inventory[i])
+              prox.doInventory(eKey, i, targetInfo.Inventory[i])
             end
           end
         end
       else
         -- New entity detected
-        prox.doEnter(k)
+        prox.doEnter(eKey)
       end
     end
   end
@@ -144,14 +144,14 @@ function prox.getEntered(nextMap)
 end
 
 function prox.getLeft(nextMap)
-  for k,v in pairs(prox.stateMap) do
-    local kPos = v.Position
-    if (prox.checkName(k) and prox.checkCoords(kPos.X, kPos.Y, kPos.Z)) then
-      if prox.hasKey(prox.lastMap, k) then
+  for eKey, eData in pairs(prox.stateMap) do
+    local kPos = eData.Position
+    if (prox.checkName(eData.Name) and prox.checkCoords(kPos.X, kPos.Y, kPos.Z)) then
+      if prox.hasKey(prox.lastMap, eKey) then
         -- Still present
       else
         -- Entity left
-        prox.doLeave(k)
+        prox.doLeave(eKey)
       end
     end
   end
@@ -196,10 +196,12 @@ end
 
 term.clear()
 
+-- Fill initial statemap
 prox.stateMap = prox.getPlayers(prox.sensor.getTargets())
-for k,v in pairs(prox.stateMap) do
-  prox.tracking[k] = prox.sensor.getTargetDetails(k)
+for eKey, eData in pairs(prox.stateMap) do
+  prox.tracking[eKey] = prox.sensor.getTargetDetails(eKey)
 end
+
 term.setCursorPos(1,4)
 while true do  
   prox.showGUI()
