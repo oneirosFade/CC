@@ -116,6 +116,7 @@ function prox.getEntered(nextMap)
   for k,v in pairs(prox.lastMap) do
     nextMap[k] = v
     local kPos = k.Position
+    print(textutils.serialize(kPos))
     if (prox.checkName(k) and prox.checkCoords(kPos.X, kPos.Y, kPos.Z)) then
       if prox.hasKey(prox.stateMap, k) then
         -- Entity has been seen already
