@@ -154,7 +154,7 @@ function prox.showGUI()
         prox.config.v1x .. ", " ..
         prox.config.v1y .. ", " ..
         prox.config.v1z .. ")-(" ..
-        prix.config.v2x .. ", " ..
+        prox.config.v2x .. ", " ..
         prox.config.v2y .. ", " ..
         prox.config.v2z .. ")")
   term.setCursorPos(1, 2)
