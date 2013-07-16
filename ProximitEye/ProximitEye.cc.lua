@@ -110,7 +110,7 @@ function prox.getEntered(nextMap)
       if prox.hasKey(prox.stateMap, k) then
         -- Entity has been seen already
         -- Check Inventory
-        local targetInfo = k
+        local targetInfo = prox.sensor.getTargetDetails(k)
         for i=1,42 do
           if (targetInfo.Inventory[i].Name == prox.tracking[k][i].Name) then
             if (targetInfo.Inventory[i].Size == prox.tracking[k][i].Size) then
