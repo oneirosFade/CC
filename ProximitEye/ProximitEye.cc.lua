@@ -16,6 +16,7 @@ prox.config = {}
 function prox.getDetails(k)
   local pcS, pcD = pcall(function() prox.sensor.getTargetDetails(k) end)
   if (not pcS) then
+    print(pcD)
     return nil
   else
     return pcD
@@ -114,7 +115,8 @@ end
 function prox.getEntered(nextMap)
   for k,v in pairs(prox.lastMap) do
     nextMap[k] = v
-    local kPos = prox.getDetails(k).Position
+    local kDet = prox.getDetails(k)
+    local kPos = kDet.Position
     if (prox.checkName(k) and prox.checkCoords(kPos.X, kPos.Y, kPos.Z)) then
       if prox.hasKey(prox.stateMap, k) then
         -- Entity has been seen already
