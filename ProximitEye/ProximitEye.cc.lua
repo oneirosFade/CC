@@ -65,7 +65,7 @@ function prox.getEntered(nextMap)
       if Map.hasKey(prox.stateMap, eKey) then
         -- Entity has been seen already
         -- Check Inventory
-        local targetInfo = SafeSense.getDetails(prox.sensor, eKey)
+        local targetInfo = SensorX.getDetails(prox.sensor, eKey)
         --if (targetInfo) then -- Make sure it hasn't vanished!
           for i=1,42 do
             if (targetInfo.Inventory[i].Name == prox.invTracker[eData.Name][i].Name) then
@@ -126,7 +126,7 @@ end
 -- Main
 
 -- Get a handle to the sensor
-prox.sensor = SafeSense.wrapSensor()
+prox.sensor = SensorX.wrapSensor()
 if (not prox.sensor) then
   print ("!! This utility requires a sensor with the Entity card.")
   return false
@@ -143,7 +143,7 @@ end
 term.clear()
 
 -- Fill initial statemap
-prox.stateMap = SafeSense.getPlayers(prox.sensor)
+prox.stateMap = SensorX.getPlayers(prox.sensor)
 for eKey, eData in pairs(prox.stateMap) do
   prox.invTracker[eKey] = eData.detail.Inventory
 end
@@ -151,7 +151,7 @@ end
 term.setCursorPos(1,4)
 while true do  
   prox.showGUI()
-  prox.lastMap = SafeSense.getPlayers(prox.sensor)
+  prox.lastMap = SensorX.getPlayers(prox.sensor)
   local nextMap = {}
 
   -- Check for new entities
