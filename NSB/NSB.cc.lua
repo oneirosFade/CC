@@ -5,7 +5,7 @@
 -- Namespace
 local nsb = {}
 
-local nsb.startup = ""
+local startup = "--/n"
 
 -- HTTP API Check
 if (not http) then
@@ -39,7 +39,7 @@ if (fs.exists("/startup")) then
   print("  shell.run(\"/sys/ReadOverride.cc.lua\")")
   print("and reboot for this to take effect.")
 else
-  nsb.startup = nsb.startup .. 
+  startup = startup .. 
     "shell.run(\"/sys/ReadOverride.cc.lua\")\n"
 end
 
@@ -47,6 +47,6 @@ end
 if (not fs.exists("/startup")) then
   print("Creating startup file...")
   local hStartup = fs.open("/startup", "w")
-  hStartup.write(nsb.startup)
+  hStartup.write(startup)
   hStartup.close()
 end
